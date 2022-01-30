@@ -51,7 +51,7 @@ plot(head(sort(table(v_tokens), decreasing = TRUE), n = 10), xlab = "Token", yla
 library("dplyr")
 tic <- Sys.time()
 phrasesLength <- length(v_phrases)
-res <- lapply(v_phrases[2:phrasesLength],
+res <- lapply(v_phrases[2:phrasesLength], # esta ejecucion tardara un rato
               spacy_parse, #This is the function to apply to every element in v_phrases
               dependency = TRUE, nounphrase = TRUE #These are the arguments of the function
 )
@@ -81,19 +81,38 @@ adjG
 
 
 #Subword tokenization
-# Creating a BPE model
 library(tokenizers.bpe)
-model <- bpe(v_phrases[2:600])
-text_part2 <- paste(v_phrases[601:1000], collapse="\n")
+model <- bpe(v_phrases[2:800]) # modelo BPE con datos para el entrenamiento del modelo
+text_part2 <- paste(v_phrases[601:1000], collapse="\n") # datos para las pruebas
 subtoks2 <- bpe_encode(model, x = text_part2, type = "subwords")
-niceSubwords <- function(strings){
-  gsub("\U2581", "_", strings)
-}
+
+niceSubwords <- function(strings){ gsub("\U2581", "_", strings) }
 niceSubwords(head(unlist(subtoks3), n=30))
 
 text_part3 <- paste(gsub("\"|,|\n|[c(]|[)]", "", verbG['Group.1']), collapse="\n")
 subtoks3 <- bpe_encode(model, x = text_part3, type = "subwords")
-niceSubwords(unlist(subtoks3))
+niceSubwords(unlist(subtoks3)) # verbos normalizados
+
 text_part4 <- paste(gsub("\"|,|\n|[c(]|[)]", "", adjG['Group.1']), collapse="\n")
 subtoks4 <- bpe_encode(model, x = text_part4, type = "subwords")
-niceSubwords(unlist(subtoks4))
+niceSubwords(unlist(subtoks4)) # adjetivos normalizados
+
+#  Distance between texts
+library(quanteda)
+texts_caps <- paragraphs
+names(texts_caps) <- paste("Chap.", 1:length(texts_caps)) #assigns a name to each string
+corpus_capsQ <- corpus(texts_caps)
+docvars(corpus_capsQ, field="Chapter") <- 1:length(texts_caps) #docvar with chapter number
+corpus_capsQ
+dfm_capsQ <- dfm(tokens(corpus_capsQ))
+
+distMatrix <-dist(as.matrix(dfm_capsQ), method="euclidean") # distancia entre capitulos
+groups <-hclust(distMatrix , method="ward.D")
+plot(groups, cex =0.8, hang= -1, xlab = "", ylab = "", main = "") # dendograma
+rect.hclust(groups, k=10)
+
+# The most and less frequent features
+dfm_capsQ_1 <- dfm(tokens(corpus_capsQ,remove_punct = TRUE))
+dfm_capsQ_2 <- dfm_remove(dfm_capsQ_1, stopwords("english")) # eliminamos las palabras menos relevantes
+topfeatures(dfm_capsQ_2) # carateristicas mas frecuentes
+topfeatures(dfm_capsQ_2,decreasing = FALSE) # caracteristicas menos frecuentes 
